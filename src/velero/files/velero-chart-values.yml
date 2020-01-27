@@ -1,0 +1,19 @@
+# https://github.com/vmware-tanzu/helm-charts/blob/master/charts/velero/values.yaml
+deployRestic: false
+initContainers:
+  # https://github.com/vmware-tanzu/velero-plugin-for-aws
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.0.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+configuration:
+  provider: aws
+  backupStorageLocation:
+    name: aws
+    prefix: k3s/velero
+    config:
+      region: minio
+      s3ForcePathStyle: true
+      s3Url: http://minio.minio.svc:9000

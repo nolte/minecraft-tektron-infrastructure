@@ -1,0 +1,8 @@
+# https://github.com/helm/charts/blob/master/stable/minecraft/values.yaml
+minecraftServer:
+  eula: true
+  serviceType: NodePort
+  version: "1.15.1"
+  type: SPIGOT
+  ops: nolte07,
+  whitelist: nolte07,

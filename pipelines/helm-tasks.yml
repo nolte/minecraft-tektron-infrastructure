@@ -1,0 +1,139 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: gitea-helm-chart-git
+  namespace: tekton-pipelines
+spec:
+  type: git
+  params:
+    - name: url
+      value: https://github.com/jfelten/gitea-helm-chart.git
+
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: helm-build
+  namespace: tekton-pipelines
+spec:
+  inputs:
+    resources:
+      - name: workspace
+        type: git
+        targetPath: chart
+  steps:
+    - name: package-chart
+      image: alpine/helm:3.0.2
+      workingDir: /workspace/chart
+      command:
+        - helm
+      args: [
+        "package",
+        "."
+      ]
+    - name: debug-chart
+      image: byrnedo/alpine-curl:latest
+      workingDir: /workspace/chart
+      command:
+        - ls
+      args: ["-all"]
+    - name: upload-chart
+      image: byrnedo/alpine-curl:latest
+      workingDir: /workspace/chart
+      command:
+        - curl
+      args: [
+        "--data-binary",
+        "@gitea-1.9.3.tgz",
+        "http://chartadmin:chartgott@chartmuseum-chartmuseum.chartmuseum.svc:8080/api/charts",
+        "-kv"
+      ]      
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: helm-repo-add
+  namespace: tekton-pipelines
+spec:
+  steps:
+    #- name: repo-login
+    #  image: alpine/helm:3.0.2
+    #  env:
+    #    - name: HELM_EXPERIMENTAL_OCI
+    #      value: "1"
+    #  command:
+    #    - helm
+    #  args: [
+    #    "registry",
+    #    "login",
+    #    "chartmuseum-chartmuseum.chartmuseum.svc:8080",
+    #    "--username",
+    #    "chartadmin",
+    #    "--password",
+    #    "chartgott",
+    #    "--insecure",
+    #  ]    
+    - name: repo-add
+      image: alpine/helm:3.0.2
+      command:
+        - helm
+      args: [
+        "repo",
+        "add",
+        "internal",
+        "http://chartmuseum-chartmuseum.chartmuseum.svc:8080"
+      ]
+   
+    - name: repo-update
+      image: alpine/helm:3.0.2
+      command:
+        - helm
+      args: [
+        "repo",
+        "update",
+      ]
+
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: helm-build
+  namespace: tekton-pipelines
+spec:
+  #workspaces:
+  #  - name: helm-chart-git
+  resources:
+    - name: helm-chart-git
+      type: git    
+  tasks:
+    - name: repo-add
+      taskRef:
+        name: helm-repo-add
+    - name: create-config
+      runAfter:
+        - repo-add
+      taskRef:
+        name: helm-build
+      resources:
+        inputs:
+        - name: workspace
+          resource: helm-chart-git
+      #workspaces:
+      #  - name: helm-chart-git
+      #    workspace: helm-chart-git
+---
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: build-gitea
+  namespace: tekton-pipelines
+spec:
+  resources:
+    - name: helm-chart-git
+      resourceRef:
+        name: gitea-helm-chart-git
+  pipelineRef:
+    name: helm-build
+  #workspaces:
+  #- name: helm-chart-git
+  #  emptyDir: {}

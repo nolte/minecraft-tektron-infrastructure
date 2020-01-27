@@ -1,0 +1,41 @@
+# https://github.com/jfelten/gitea-helm-chart/blob/master/values.yaml
+images:
+  gitea: "gitea/gitea:1.9.6"
+
+resources:
+  gitea:
+    requests:
+      memory: 500Mi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 2
+  memcached:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 200Mi
+      cpu: 200m
+
+
+ingress:
+  enabled: false
+config:
+  secretKey: xxxxxxxxxxxxxxxxxxxxxa
+  disableInstaller: true
+  offlineMode: true
+  disableRegistration: false
+  server:
+    protocol: http
+    redirectOtherPort: true
+    portToRedirect: 443
+
+useInPodPostgres: true
+
+
+inPodPostgres:
+  existingSecret: false
+
+persistence:
+  enabled: false
